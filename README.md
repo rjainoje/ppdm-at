@@ -5,7 +5,7 @@ This tool (ppdmat) provides a comprehensive report on assets, jobs, data protect
 
 This tool will make a series of REST API calls to PPDM to gather information and parse the output to excel sheet. 
 I have developed this tool for several reasons, first, to be able to demonstrate how customers can leverage powerful REST API to automate various tasks and second, to be able to provide a report which can give complete insights into the backup environment.
-This report can also be used to do capacity trending, chronic clients, low-throughput clients and many other stats to help taking proactive steps and keeping the environment healthy.
+This report can also be used for capacity trending, chronic clients, low-throughput clients and many other stats to help taking proactive steps and keeping the environment healthy.
 
 This is a v1.0.0 and, based on the feedback, I will invest more time in adding data, graphs and analytics to it.
 
@@ -56,7 +56,7 @@ Logout for user: user from PPDM: x.x.x.x
 C:\Data\Coding\PPDM Reports\v.0.0.1\dist>
 
 ```
-**Following is a summary of PPDM assessment (exmaple)**
+**Following is a summary of PPDM assessment (example)**
 
 ![](images/summary.PNG)
 
@@ -75,6 +75,14 @@ I will help you with the documention to install PPDM, its a virtual appliance, e
 * **Raghava Jainoje** - [rjainoje](https://github.com/rjainoje)
 
 
+## Compatibility
+Code has been tested with Python 3.9.2
+
+Library dependencies are available in 'requirements.txt'
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+
+## Disclaimer
+Barely no error checking has been implemented. Feel free to download it and harden it if you want to use it in production. Use at your own risk
