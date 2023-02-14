@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # PPDM assessment tool for Dell PowerProtect Data Manager - Github @ rjainoje
 __author__ = "Raghava Jainoje"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __email__ = " "
-__date__ = "2022-07-11"
+__date__ = "2023-02-14"
 
 import argparse
 from operator import index
@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 pd.options.mode.chained_assignment = None
 
-writer = pd.ExcelWriter('ppdmreport.xlsx', engine='xlsxwriter')
+writer = pd.ExcelWriter('ppdmdetails.xlsx', engine='xlsxwriter')
 urllib3.disable_warnings()
 summary_dict = {'PPDM SERVER DETAILS': ''}
 
@@ -211,7 +211,7 @@ def get_app_agents(uri, token):
     if (response.status_code != 200):
         raise Exception('Failed to query {}, code: {}, body: {}'.format(uri, response.status_code, response.text))
     df7 = pd.json_normalize(response.json()['content'])
-    print ("Written App agents information to ppdmreport.xls")
+    print ("Written App agents information to ppdmdetails.xls")
     return df7
 
 def get_activities(uri, token, window):
@@ -342,44 +342,6 @@ def get_srvdr(uri, token):
     summary_dict['PPDM Version'] = srvdict[0]['version']
     return srvdrb_df
 
-
-def get_bkpcopies(uri, token, assetid, window):
-    # Get all the backup images / copies of assets
-    suffixurl = "/assets/{}/copies".format(assetid)
-    uri += suffixurl
-    headers = {'Content-Type': 'application/json', 'Authorization': 'Bearer {}'.format(token)}
-    filter = 'state eq "IDLE" and createTime gt "{}"'.format(window)
-    pageSize = '10000'
-    params = {'filter': filter, 'pageSize': pageSize}
-    try:
-        response = requests.get(uri, headers=headers, params=params, verify=False)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as err:
-        print("The call {}{} failed with exception:{}".format(response.request.method, response.url, err))
-    if (response.status_code != 200):
-        raise Exception('Failed to query {}, code: {}, body: {}'.format(uri, response.status_code, response.text))
-    copiesdf = pd.json_normalize(response.json()['content'])
-    FIELDS1 = ["assetId", "createTime", "retentionTime", "size", "state", "copyType", "retentionLock",  "details.arraySerialNo", "replicatedCopy"]
-    FIELDS2 = list(copiesdf.keys())
-    FIELDS = []
-    for element in FIELDS1:
-        if element in FIELDS2:
-            FIELDS.append(element)
-    cp_df = copiesdf[FIELDS]
-    return cp_df
-
-def bkpcopies(uri, token, assets, window):
-    bimagedf = assets[["id", "Protection Capacity(b)"]]
-    is_protected = bimagedf["Protection Capacity(b)"]!=0
-    bimagedf1 = bimagedf[is_protected]
-    asset_idlist = bimagedf['id'].values.tolist()
-    imagelist = []
-    for assetid in asset_idlist:
-        bkpimage = get_bkpcopies(uri, token, assetid, window)
-        imagelist.append(bkpimage)
-    imagesdf = pd.concat(imagelist, ignore_index=True)
-    return imagesdf
-
 def chartxls(activities):
     # Create a chart
     activities['Date'] = pd.to_datetime(activities['createTime']).dt.date
@@ -408,10 +370,14 @@ def chartxls(activities):
     worksheet.insert_chart('E2', chart)
     print ("Created column chat to ppdmreport.xls")
 
-def summaryxls(assets, activities, jobgroups, bkpimages, ddmtrees, licinfo, rptdays):
+def summaryxls(assets, activities, jobgroups, ddmtrees, licinfo, rptdays):
     # Write summary to excel sheet named summary
-    summary_dict['LicenseType'] = licinfo[0]['licenseType']
-    summary_dict['FETB License'] = licinfo[0]['frontendCapacityInTB']
+    if licinfo[0]['featureName'] == "POWERPROTECT SW TRIAL":
+        summary_dict['License Type'] = licinfo[0]['featureName']
+        summary_dict['Expiry Date'] = licinfo[0]['endDate']
+    else:
+        summary_dict['License Type'] = licinfo[0]['featureName']
+        summary_dict['Expiry Date'] = licinfo[0]['licenseType']
     summary_dict['ASSET SUMMARY'] = ''
     atype = assets.value_counts('Type')
     astatus = assets.value_counts('Protection Status')
@@ -429,8 +395,6 @@ def summaryxls(assets, activities, jobgroups, bkpimages, ddmtrees, licinfo, rptd
     dedupeless1 = act_lowdedupe[act_lowdedupe < 1].count()
     dedupeless3 = act_lowdedupe[act_lowdedupe < 3].count()
     dedupegt3 = act_lowdedupe[act_lowdedupe > 3].count()
-    bkp_imgsize = bkpimages['size'].sum()
-    bkp_imgcount = bkpimages['size'].count()
     mtree_precomp = ddmtrees['attributes.dayPreComp'].astype(float).sum()
     mtree_postcomp = ddmtrees['attributes.dayPostComp'].astype(float).sum()
     summary_dict['ACTIVITIES SUMMARY - {} DAYS'.format(rptdays)] = ''
@@ -446,9 +410,6 @@ def summaryxls(assets, activities, jobgroups, bkpimages, ddmtrees, licinfo, rptd
     lessth5mb = jbstats[jbstats < 5000000].count()
     summary_dict['Backup Throughput (< 1MB) Clients'] = lessth1mb
     summary_dict['Backup Throughput (< 5MB) Clients'] = lessth5mb
-    summary_dict['BACKUP IMAGES SUMMARY - {} DAYS'.format(rptdays)] = ''
-    summary_dict['Backup Images Size (GB)'] = round(bkp_imgsize/1024/1024/1024, 2)
-    summary_dict['Total number of Backup Images'] = round(bkp_imgcount)
     summary_dict['DATA DOMAIN SUMMARY - LAST DAY'] = ''
     summary_dict['PreComp (GB)'] = round(mtree_precomp/1024/1024/1024, 2)
     summary_dict['PostComp (GB)'] = round(mtree_postcomp/1024/1024/1024, 2)
@@ -463,7 +424,7 @@ def summaryxls(assets, activities, jobgroups, bkpimages, ddmtrees, licinfo, rptd
         column_length = max(summdf[column].astype(str).map(len).max(), len(column))
         col_idx = summdf.columns.get_loc(column)
         writer.sheets['Summary'].set_column(col_idx, col_idx, column_length)
-    print ("Written Summary information to ppdmreport.xls")
+    print ("Written Summary information to ppdmdetails.xls")
 
 def outxls(df_dict):
     # Write output to excel
@@ -475,7 +436,7 @@ def outxls(df_dict):
         column_settings = [{'header': column} for column in df.columns]
         worksheet.add_table(0, 0, max_row, max_col - 1, {'columns': column_settings, 'style': 'Table Style Medium 2'})
         worksheet.set_column(0, max_col - 1, 12)
-        print ("Written '{}' information to ppdmreport.xls".format(sheet))
+        print ("Written '{}' information to ppdmdetails.xls".format(sheet))
     # writer.sheets['Summary'].activate()
     writer.save()    
 
@@ -513,12 +474,17 @@ def main():
     activities = get_activities(uri, token, window)
     jobgroups = get_jobgroups(uri, token, window)
     ddmtrees = get_ddmtrees(uri, token)
-    bkpimages = bkpcopies(uri, token, assets, window)
     licinfo = get_license(uri, token)
-    srvdrinfo = get_srvdr(uri, token)
-    summaryxls(assets, activities, jobgroups, bkpimages, ddmtrees, licinfo, rptdays)
-    chartxls(activities)
-    df_dict = {'Activities': activities, 'JobGroups': jobgroups, 'Policies': policies, 'BkpImagesList': bkpimages, 'Assets': assets, 'InvSources': invsources, 'Storage': storage, 'DDStorageUnits': ddmtrees, 'ProtectionEngines': protectioneng, 'AppAgents': appagents, 'PPDMServer': appconfig, 'ServerDR': srvdrinfo}
+    try:
+        srvdrinfo = get_srvdr(uri, token)
+    except:
+        srvdrinfo = pd.DataFrame()
+    summaryxls(assets, activities, jobgroups, ddmtrees, licinfo, rptdays)
+    try:
+        chartxls(activities)
+    except:
+        pass
+    df_dict = {'Activities': activities, 'JobGroups': jobgroups, 'Policies': policies, 'Assets': assets, 'InvSources': invsources, 'Storage': storage, 'DDStorageUnits': ddmtrees, 'ProtectionEngines': protectioneng, 'AppAgents': appagents, 'PPDMServer': appconfig, 'ServerDR': srvdrinfo}
     outxls(df_dict)
     print("All the data written to the file")
     logout(ppdm, user, uri, token)
