@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # PPDM assessment tool for Dell PowerProtect Data Manager - Github @ rjainoje
 __author__ = "Raghava Jainoje"
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __email__ = " "
-__date__ = "2023-02-14"
+__date__ = "2023-09-26"
 
 import argparse
 from operator import index
@@ -438,7 +438,7 @@ def outxls(df_dict):
         worksheet.set_column(0, max_col - 1, 12)
         print ("Written '{}' information to ppdmdetails.xls".format(sheet))
     # writer.sheets['Summary'].activate()
-    writer.save()    
+    writer.close()
 
 def logout(ppdm, user, uri, token):
     suffixurl = "/logout"

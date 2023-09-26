@@ -4,12 +4,13 @@ A command line assessment tool developed for Dell PowerProtect Data Manager to p
 This tool (ppdmat) provides a comprehensive report on assets, jobs, data protected, data transferred, throughput, deduplication, data over the period of time, capacity and many more stats that are important to maintain and manage the infrastructure.
 
 This tool will make a series of REST API calls to PPDM to gather information and parse the output to excel sheet. 
-I have developed this tool for several reasons, first, to be able to demonstrate how customers can leverage powerful REST API to automate various tasks and second, to be able to provide a report which can give complete insights into the backup environment.
+I have developed this tool for two reasons, first, to be able to demonstrate how customers can leverage powerful REST API to automate various tasks and second, to be able to provide a report which can give complete insights into the backup environment.
 This report can also be used to do capacity trending, chronic clients, low-throughput clients and many other stats to help taking proactive steps and keeping the environment healthy.
 
 This is a v1.0.0 and, based on the feedback, I will invest more time in adding data, graphs and analytics to it.
 
 ## Getting Started
+There are two options, either you can run exe which i don't suggest you or use python script (I prefer you to do this)
 
 **Windows**
 The exe is available in Windows Exe folder, download the exe and execute the same. If you are not comfortable running an exe, you can download ppdmat.py file and run the same.
@@ -21,6 +22,7 @@ ppdmat.exe -s <PPDM IP> -u <user> -p <pwd> -rd <report days>
 OR
 
 **Windows/Linux**
+Install the required modules listed in requirements.txt with the command "pip install -r requirements.txt" then execute the following command
 
 ```
 ppdmat.py -s <PPDM NAME / IP> -u <user> -p <pwd> -rd <report days>
